@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR // gen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0f0e;
+    --panel:#111716;
+    --line:#1f2b28;
+    --text:#d7e3df;
+    --muted:#6f8a83;
+    --accent:#39ff9d;
+    --accent-dim:#1f7a52;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(57,255,157,0.05), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono','Fira Code',ui-monospace,Consolas,monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;
+    max-width:420px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:28px;
+    box-shadow:0 0 0 1px rgba(57,255,157,0.03), 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--accent-dim);
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  h1{
+    font-size:18px;
+    margin:0 0 20px 0;
+    color:var(--text);
+    font-weight:600;
+  }
+  h1 span{color:var(--accent);}
+  label{
+    display:block;
+    font-size:11px;
+    color:var(--muted);
+    margin-bottom:6px;
+    letter-spacing:0.05em;
+  }
+  textarea{
+    width:100%;
+    background:#0d1312;
+    border:1px solid var(--line);
+    border-radius:6px;
+    color:var(--text);
+    padding:10px 12px;
+    font-family:inherit;
+    font-size:13px;
+    resize:vertical;
+    min-height:64px;
+    outline:none;
+  }
+  textarea:focus{border-color:var(--accent-dim);}
+  .row{display:flex; gap:10px; margin-top:14px;}
+  select{
+    flex:1;
+    background:#0d1312;
+    border:1px solid var(--line);
+    border-radius:6px;
+    color:var(--text);
+    padding:8px 10px;
+    font-family:inherit;
+    font-size:12px;
+  }
+  button{
+    font-family:inherit;
+    font-size:12px;
+    letter-spacing:0.04em;
+    border-radius:6px;
+    border:1px solid transparent;
+    padding:10px 16px;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.97);}
+  #generateBtn{
+    width:100%;
+    margin-top:14px;
+    background:var(--accent);
+    color:#04120a;
+    font-weight:700;
+    border:none;
+  }
+  #generateBtn:hover{opacity:0.9;}
+  .colorRow{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  .colorField{
+    flex:1;
+    background:#0d1312;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .colorField span{font-size:11px; color:var(--muted);}
+  .colorField input[type=color]{
+    width:26px;
+    height:26px;
+    border:none;
+    background:none;
+    padding:0;
+    cursor:pointer;
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .fileField{
+    margin-top:14px;
+  }
+  .fileField label{margin-bottom:6px;}
+  .fileRow{
+    display:flex;
+    gap:8px;
+  }
+  .fileRow label.upload{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#0d1312;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    padding:9px 10px;
+    font-size:11px;
+    color:var(--muted);
+    cursor:pointer;
+    text-align:center;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .fileRow label.upload:hover{border-color:var(--accent-dim); color:var(--text);}
+  .fileRow label.upload.has-file{border-style:solid; border-color:var(--accent-dim); color:var(--accent);}
+  .fileRow input[type=file]{display:none;}
+  #clearBgBtn{
+    display:none;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:9px 12px;
+  }
+  #clearBgBtn.show{display:block;}
+  .stage{
+    margin-top:22px;
+    border-top:1px dashed var(--line);
+    padding-top:22px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+  .stage.show{display:flex;}
+  #frame{
+    padding:20px;
+    border-radius:10px;
+    background:#fff;
+    background-size:cover;
+    background-position:center;
+    transition:background-color .15s ease;
+  }
+  #qrHolder{
+    background:#fff;
+    padding:14px;
+    border-radius:8px;
+    line-height:0;
+    box-shadow:0 4px 18px rgba(0,0,0,0.25);
+  }
+  #downloadBtn{
+    width:100%;
+    background:transparent;
+    color:var(--accent);
+    border:1px solid var(--accent-dim);
+  }
+  #downloadBtn:hover{background:rgba(57,255,157,0.08);}
+  .hint{
+    font-size:10.5px;
+    color:var(--muted);
+    margin-top:10px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">client-side · no network</div>
+    <h1>QR<span>::</span>gen</h1>
+
+    <label for="dataInput">Data / text / URL</label>
+    <textarea id="dataInput" placeholder="https://katsekpor.vercel.app"></textarea>
+
+    <div class="row">
+      <select id="sizeSelect">
+        <option value="200">200 px</option>
+        <option value="300" selected>300 px</option>
+        <option value="500">500 px</option>
+      </select>
+      <select id="ecSelect">
+        <option value="L">EC: L</option>
+        <option value="M" selected>EC: M</option>
+        <option value="Q">EC: Q</option>
+        <option value="H">EC: H</option>
+      </select>
+    </div>
+
+    <div class="colorRow">
+      <div class="colorField">
+        <span>QR color</span>
+        <input type="color" id="darkColor" value="#000000">
+      </div>
+      <div class="colorField">
+        <span>QR background</span>
+        <input type="color" id="lightColor" value="#ffffff">
+      </div>
+    </div>
+
+    <div class="fileField">
+      <label>Backdrop picture (optional, decorative)</label>
+      <div class="fileRow">
+        <label class="upload" id="bgUploadLabel" for="bgUpload">Choose image…</label>
+        <input type="file" id="bgUpload" accept="image/*">
+        <button id="clearBgBtn" type="button">✕</button>
+      </div>
+    </div>
+
+    <button id="generateBtn">Generate</button>
+
+    <div class="stage" id="stage">
+      <div id="frame">
+        <div id="qrHolder"></div>
+      </div>
+      <button id="downloadBtn">↓ Download PNG</button>
+      <div class="hint">Rendered and downloaded entirely in your browser.</div>
+    </div>
+  </div>
+
+<script>
+  const dataInput   = document.getElementById('dataInput');
+  const sizeSelect  = document.getElementById('sizeSelect');
+  const ecSelect    = document.getElementById('ecSelect');
+  const darkColor   = document.getElementById('darkColor');
+  const lightColor  = document.getElementById('lightColor');
+  const bgUpload    = document.getElementById('bgUpload');
+  const bgUploadLabel = document.getElementById('bgUploadLabel');
+  const clearBgBtn  = document.getElementById('clearBgBtn');
+  const generateBtn = document.getElementById('generateBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const stage       = document.getElementById('stage');
+  const frame       = document.getElementById('frame');
+  const qrHolder    = document.getElementById('qrHolder');
+
+  const ecMap = {
+    L: QRCode.CorrectLevel.L,
+    M: QRCode.CorrectLevel.M,
+    Q: QRCode.CorrectLevel.Q,
+    H: QRCode.CorrectLevel.H,
+  };
+
+  const FRAME_PAD = 20;
+  const QR_PAD = 14;
+
+  let bgImage = null; // HTMLImageElement or null
+
+  bgUpload.addEventListener('change', () => {
+    const file = bgUpload.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        bgImage = img;
+        frame.style.backgroundImage = `url(${e.target.result})`;
+        bgUploadLabel.textContent = file.name.length > 22 ? file.name.slice(0, 19) + '…' : file.name;
+        bgUploadLabel.classList.add('has-file');
+        clearBgBtn.classList.add('show');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearBgBtn.addEventListener('click', () => {
+    bgImage = null;
+    bgUpload.value = '';
+    frame.style.backgroundImage = 'none';
+    bgUploadLabel.textContent = 'Choose image…';
+    bgUploadLabel.classList.remove('has-file');
+    clearBgBtn.classList.remove('show');
+  });
+
+  function generate() {
+    const text = dataInput.value.trim();
+    if (!text) {
+      dataInput.style.borderColor = '#ff5c5c';
+      setTimeout(() => (dataInput.style.borderColor = ''), 600);
+      return;
+    }
+
+    const size = parseInt(sizeSelect.value, 10);
+    qrHolder.innerHTML = '';
+
+    new QRCode(qrHolder, {
+      text,
+      width: size,
+      height: size,
+      colorDark: darkColor.value,
+      colorLight: lightColor.value,
+      correctLevel: ecMap[ecSelect.value],
+    });
+
+    frame.style.backgroundColor = bgImage ? 'transparent' : lightColor.value;
+    stage.classList.add('show');
+  }
+
+  // Build a single canvas combining backdrop image + white QR card, for download.
+  function buildCompositeCanvas(qrCanvas) {
+    const qrSize = qrCanvas.width;
+    const cardSize = qrSize + QR_PAD * 2;
+    const total = cardSize + FRAME_PAD * 2;
+
+    const out = document.createElement('canvas');
+    out.width = total;
+    out.height = total;
+    const ctx = out.getContext('2d');
+
+    if (bgImage) {
+      // cover-fit the backdrop image
+      const scale = Math.max(total / bgImage.width, total / bgImage.height);
+      const w = bgImage.width * scale;
+      const h = bgImage.height * scale;
+      ctx.drawImage(bgImage, (total - w) / 2, (total - h) / 2, w, h);
+    } else {
+      ctx.fillStyle = lightColor.value;
+      ctx.fillRect(0, 0, total, total);
+    }
+
+    // white card behind the QR so it stays scannable over any backdrop
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(FRAME_PAD, FRAME_PAD, cardSize, cardSize);
+    ctx.drawImage(qrCanvas, FRAME_PAD + QR_PAD, FRAME_PAD + QR_PAD);
+
+    return out;
+  }
+
+  function download() {
+    const qrCanvas = qrHolder.querySelector('canvas');
+    if (!qrCanvas) return;
+    const composite = buildCompositeCanvas(qrCanvas);
+    const link = document.createElement('a');
+    link.href = composite.toDataURL('image/png');
+    link.download = 'qrcode.png';
+    link.click();
+  }
+
+  generateBtn.addEventListener('click', generate);
+  downloadBtn.addEventListener('click', download);
+  dataInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) generate();
+  });
+</script>
+</body>
+</html>
