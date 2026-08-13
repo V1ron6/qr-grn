@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio</title>
+
+<!-- QRCodeStyling gives rounded/dotted QR modules, custom eyes and logos. -->
+<script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+
+<style>
+:root{
+  --bg:#0a0d0c;
+  --panel:#111716;
+  --panel2:#0d1211;
+  --line:#24302d;
+  --text:#e8f0ed;
+  --muted:#81938d;
+  --accent:#39ff9d;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:22px;
+  background:radial-gradient(circle at 20% 0%,rgba(57,255,157,.08),transparent 35%),var(--bg);
+  color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+}
+.app{max-width:1100px;margin:auto;display:grid;grid-template-columns:360px 1fr;gap:22px}
+.panel{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:20px;box-shadow:0 20px 70px rgba(0,0,0,.35)
+}
+.brand{font:700 19px ui-monospace,monospace;margin-bottom:4px}
+.brand span{color:var(--accent)}
+.small{font-size:11px;color:var(--muted);margin-bottom:18px}
+label{display:block;font-size:11px;color:var(--muted);margin:14px 0 6px}
+input[type=text],textarea,select{
+  width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);
+  border-radius:8px;padding:10px;font:13px ui-monospace,monospace;outline:none
+}
+textarea{min-height:70px;resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+button,.upload{
+  width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  padding:10px;border-radius:8px;cursor:pointer;font-size:12px
+}
+button:hover,.upload:hover{border-color:#397c61}
+.primary{background:var(--accent);color:#04120a;border-color:var(--accent);font-weight:800}
+.file{display:none}
+.upload{display:flex;justify-content:center;align-items:center;text-align:center;color:var(--muted)}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.color{
+  border:1px solid var(--line);border-radius:8px;padding:9px;background:var(--panel2);
+  display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)
+}
+.color input{width:30px;height:26px;padding:0;border:0;background:none}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.previewPanel{display:flex;align-items:center;justify-content:center;min-height:720px;overflow:hidden}
+.stage{
+  width:min(100%,520px);aspect-ratio:4/5;position:relative;overflow:hidden;border-radius:22px;
+  background:#e9dbe7 center/cover no-repeat;
+  box-shadow:0 30px 90px rgba(0,0,0,.5)
+}
+.overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.10))}
+.content{position:absolute;inset:7%;display:flex;flex-direction:column;align-items:center}
+.top{font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-top:2%;color:#333;text-align:center}
+.qrCard{
+  margin-top:8%;width:88%;aspect-ratio:1/1;background:#fff;border-radius:24px;
+  padding:8%;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 18px 45px rgba(0,0,0,.20)
+}
+#qr{width:100%;display:flex;align-items:center;justify-content:center}
+#qr canvas,#qr svg{max-width:100%;height:auto!important}
+.title{
+  margin-top:7%;font-size:clamp(20px,4vw,34px);font-weight:900;text-align:center;color:#fff;
+  text-shadow:0 2px 10px rgba(0,0,0,.45)
+}
+.ribbon{
+  margin-top:4%;background:#292929;color:#fff;padding:11px 34px;
+  font-family:Georgia,serif;font-weight:800;font-size:clamp(15px,3vw,25px);
+  transform:rotate(-2deg);clip-path:polygon(0 18%,9% 0,91% 0,100% 18%,94% 50%,100% 82%,91% 100%,9% 100%,0 82%,6% 50%);
+  filter:drop-shadow(0 7px 7px rgba(0,0,0,.18))
+}
+.bottom{margin-top:auto;margin-bottom:2%;font-size:10px;color:#fff;text-align:center;text-shadow:0 1px 6px #000}
+@media(max-width:820px){.app{grid-template-columns:1fr}.previewPanel{min-height:auto;padding:10px}.stage{width:min(100%,500px)}}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <section class="panel">
+    <div class="brand">QR<span>::</span>STUDIO</div>
+    <div class="small">Create polished, poster-style QR codes with a custom background.</div>
+
+    <label>URL / text</label>
+    <textarea id="data" placeholder="https://example.com"></textarea>
+
+    <div class="grid">
+      <div>
+        <label>QR style</label>
+        <select id="dots">
+          <option value="rounded">Rounded</option>
+          <option value="dots">Dots</option>
+          <option value="square">Square</option>
+          <option value="classy">Classy</option>
+        </select>
+      </div>
+      <div>
+        <label>Eye style</label>
+        <select id="corners">
+          <option value="extra-rounded">Extra rounded</option>
+          <option value="rounded">Rounded</option>
+          <option value="square">Square</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Background image</label>
+    <label class="upload" for="bg">Choose background image</label>
+    <input class="file" id="bg" type="file" accept="image/*">
+
+    <label>QR logo (optional)</label>
+    <label class="upload" for="logo">Choose logo</label>
+    <input class="file" id="logo" type="file" accept="image/*">
+
+    <div class="colors">
+      <div class="color">QR <input id="qrColor" type="color" value="#222222"></div>
+      <div class="color">Background <input id="qrBg" type="color" value="#ffffff"></div>
+    </div>
+
+    <label>Headline</label>
+    <input id="title" type="text" value="Scan QR Code">
+
+    <label>Small label</label>
+    <input id="top" type="text" value="SCAN • CONNECT • EXPLORE">
+
+    <div class="grid">
+      <div>
+        <label>Size</label>
+        <select id="size">
+          <option value="600">600 px</option>
+          <option value="800" selected>800 px</option>
+          <option value="1000">1000 px</option>
+        </select>
+      </div>
+      <div>
+        <label>Error correction</label>
+        <select id="ec">
+          <option value="L">Low</option>
+          <option value="M" selected>Medium</option>
+          <option value="Q">High</option>
+          <option value="H">Highest</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="generate">Generate</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div class="actions">
+      <button id="download">Download poster</button>
+      <button id="downloadQr">Download QR</button>
+    </div>
+  </section>
+
+  <section class="panel previewPanel">
+    <div class="stage" id="stage">
+      <div class="overlay"></div>
+      <div class="content">
+        <div class="top" id="previewTop">SCAN • CONNECT • EXPLORE</div>
+        <div class="qrCard"><div id="qr"></div></div>
+        <div class="title" id="previewTitle">Scan QR Code</div>
+        <div class="ribbon">Scan QR Code</div>
+        <div class="bottom">Generated with QR::STUDIO</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+let qr;
+let bgData = null;
+let logoData = null;
+
+const $ = id => document.getElementById(id);
+
+const ecc = {L:"L", M:"M", Q:"Q", H:"H"};
+
+function makeQR(){
+  const text = $("data").value.trim();
+  if(!text){ $("data").focus(); return; }
+
+  $("qr").innerHTML = "";
+
+  qr = new QRCodeStyling({
+    width: +$("size").value,
+    height: +$("size").value,
+    type: "canvas",
+    data: text,
+    margin: 0,
+    qrOptions: { errorCorrectionLevel: ecc[$("ec").value] },
+    dotsOptions: {
+      color: $("qrColor").value,
+      type: $("dots").value
+    },
+    cornersSquareOptions: {
+      color: $("qrColor").value,
+      type: $("corners").value
+    },
+    cornersDotOptions: {
+      color: $("qrColor").value,
+      type: $("corners").value === "square" ? "square" : "dot"
+    },
+    backgroundOptions: { color: $("qrBg").value },
+    image: logoData || undefined,
+    imageOptions: {
+      hideBackgroundDots: true,
+      imageSize: 0.23,
+      margin: 7,
+      crossOrigin: "anonymous"
+    }
+  });
+
+  qr.append($("qr"));
+  $("previewTitle").textContent = $("title").value || "Scan QR Code";
+  $("previewTop").textContent = $("top").value || "";
+}
+
+function loadFile(input, cb){
+  const file = input.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = e => cb(e.target.result);
+  r.readAsDataURL(file);
+}
+
+$("bg").addEventListener("change", () => {
+  loadFile($("bg"), data => {
+    bgData = data;
+    $("stage").style.backgroundImage = `url("${data}")`;
+  });
+});
+
+$("logo").addEventListener("change", () => {
+  loadFile($("logo"), data => { logoData = data; makeQR(); });
+});
+
+$("generate").addEventListener("click", makeQR);
+
+["dots","corners","qrColor","qrBg","size","ec","title","top"].forEach(id=>{
+  $(id).addEventListener("change", makeQR);
+  $(id).addEventListener("input", ()=>{
+    if(id==="title") $("previewTitle").textContent = $(id).value;
+    if(id==="top") $("previewTop").textContent = $(id).value;
+  });
+});
+
+$("reset").addEventListener("click", ()=>{
+  $("data").value="";
+  $("title").value="Scan QR Code";
+  $("top").value="SCAN • CONNECT • EXPLORE";
+  bgData=null; logoData=null;
+  $("stage").style.backgroundImage="";
+  $("qr").innerHTML="";
+});
+
+async function qrBlob(){
+  if(!qr) makeQR();
+  return await qr.getRawData("png");
+}
+
+async function downloadQR(){
+  const blob = await qrBlob();
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="qrcode.png";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+async function buildPosterCanvas(){
+  const blob = await qrBlob();
+  const qrImg = new Image();
+
+  return new Promise((resolve, reject) => {
+    qrImg.onload = () => {
+      const W=1200, H=1500, c=document.createElement("canvas");
+      c.width=W; c.height=H;
+      const ctx=c.getContext("2d");
+
+      if(bgData){
+        const bg=new Image();
+        bg.onload=()=>{ drawPoster(ctx,bg,qrImg,W,H,c,false); resolve(c); };
+        bg.onerror=reject;
+        bg.src=bgData;
+      }else{
+        ctx.fillStyle="#e9dbe7";
+        ctx.fillRect(0,0,W,H);
+        drawPoster(ctx,null,qrImg,W,H,c,false);
+        resolve(c);
+      }
+    };
+    qrImg.onerror=reject;
+    qrImg.src=URL.createObjectURL(blob);
+  });
+}
+
+async function downloadPoster(){
+  const c = await buildPosterCanvas();
+  c.toBlob(blob=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="qr-poster.png";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  },"image/png");
+}
+
+async function downloadPDF(){
+  const c = await buildPosterCanvas();
+  const { jsPDF } = window.jspdf;
+
+  // A finished, print-ready A4 portrait PDF.
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true
+  });
+
+  const pageW = 210;
+  const pageH = 297;
+  const imgData = c.toDataURL("image/png", 1.0);
+
+  // Fill the complete A4 page with the designed poster.
+  pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
+  pdf.setProperties({
+    title: $("title").value || "QR Code Poster",
+    subject: "QR Code Poster",
+    creator: "QR Studio"
+  });
+
+  pdf.save("qr-poster.pdf");
+}
+
+function drawPoster(ctx,bg,qrImg,W,H,c,exportMode){
+  if(bg){
+    const s=Math.max(W/bg.width,H/bg.height);
+    const w=bg.width*s,h=bg.height*s;
+    ctx.drawImage(bg,(W-w)/2,(H-h)/2,w,h);
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,"rgba(0,0,0,.03)");
+    g.addColorStop(1,"rgba(0,0,0,.12)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  const cardW=930, cardX=(W-cardW)/2, cardY=180, cardH=930;
+  ctx.fillStyle="#fff";
+  roundedRect(ctx,cardX,cardY,cardW,cardH,46);ctx.fill();
+
+  const pad=95;
+  ctx.drawImage(qrImg,cardX+pad,cardY+pad,cardW-pad*2,cardW-pad*2);
+
+  ctx.textAlign="center";
+  ctx.fillStyle="#fff";
+  ctx.font="900 58px Arial";
+  ctx.shadowColor="rgba(0,0,0,.4)";
+  ctx.shadowBlur=14;
+  ctx.fillText($("title").value||"Scan QR Code",W,1260);
+  ctx.shadowBlur=0;
+
+  const y=1345;
+  ctx.fillStyle="#292929";
+  ctx.beginPath();
+  ctx.moveTo(110,y-52);ctx.lineTo(180,y-80);ctx.lineTo(W-180,y-80);ctx.lineTo(W-110,y-52);
+  ctx.lineTo(W-130,y);ctx.lineTo(W-110,y+52);ctx.lineTo(W-180,y+80);ctx.lineTo(180,y+80);
+  ctx.lineTo(110,y+52);ctx.lineTo(130,y);ctx.closePath();ctx.fill();
+
+  ctx.fillStyle="#fff";
+  ctx.font="bold 40px Georgia";
+  ctx.fillText("Scan QR Code",W,y+14);
+}
+
+$("downloadPdf").addEventListener("click", downloadPDF);
+
+
+</script>
+</body>
+</html>
